@@ -1,0 +1,135 @@
+---
+title: "Riyadh Radhi LDA"
+author: "Riyadh Radhi"
+date: "March 3, 2019"
+output:
+  word_document: default
+  html_document: default
+---
+# LDA
+## Completed Task
+
+The following report will try to construct `LDA` that will predict wheather a completed task will be **Yes** or it will be **No ** 
+
+
+### 1.Step One
+
+First, I will load all the requried libraries and set the working directory
+
+
+```{r, message= FALSE, warning=FALSE}
+
+rm(list = ls())
+
+library(MASS)
+library(dplyr)
+library(ggplot2)
+library(rtf)
+library(scales)
+library(caret)
+library(class)
+library(pROC)
+library(ROCR)
+
+```
+
+### 2.Step Two
+
+Then I will read the data and set the seed. Then I will partition my data into training and testing.
+
+```{r}
+
+df <- read.csv("System administrators.csv")
+set.seed(175191)
+
+index <- createDataPartition(df$Completed.task, p = 0.75,list = F)
+train <- df[index,]
+test <- df[-index,]
+
+```
+
+### 3.Step Three
+
+Now I will make scatter plot between Training and Experience and putting the color as completed task. We can see that 
+somehow we can seperate our data lineary
+
+```{r}
+ggplot(df, aes(Training, Experience))+
+  geom_point(aes(col = df$Completed.task))
+```
+
+
+### 4.Step Four
+
+Now I will run a discriminant analysis with both predictors using training data.
+
+
+```{r}
+train.lda <- lda(Completed.task ~ Training + Experience, data = train)
+train.lda
+```
+
+
+
+
+### 5.Step Five 
+
+After this, I will predict class labels on the test set
+
+```{r}
+pred <- predict(train.lda, newdata = test)
+
+
+head(pred$class)
+round(head(pred$posterior),4)
+head(pred$x)
+```
+
+### 6.Step Six
+
+
+Now I wil do the confusion matrix and comment on the resutls 
+
+```{r}
+confusionMatrix(test$Completed.task, pred$class)
+```
+
+Now lets explain the result of our confusion matrix. 
+
+**Sensitivity** : Here it means that given the task was not completed what is the probability that the model will make the correct decision 
+
+**Specificity**: Here it means that given the completed task is yes, what is the probability that the model will say so
+
+**Positive Predictive** : True Positives/(True Positives + False Positives)
+$ p = 1 / 1 $
+
+**Negative Predictive Value** : True Negatives/(True Negatives + False Negatives)
+$ p = 15/17 $
+
+### 7 Step Seven 
+
+Now lets find the area under the curve 
+
+```{r}
+predd <- prediction(pred$x, test$Completed.task)
+
+perf <- performance(predd, "tpr", "fpr")
+
+plot(perf)
+
+
+performance(predd, "auc")@y.values
+
+```
+
+
+### 8 Step Eight 
+
+Now I will take the special case of  an administrator with 4 months of experience and 6 credits of training.
+Based on my results, this administrator is not going to complete the task 
+```{r}
+pred <- predict(train.lda, newdata = data.frame(Experience = 4,Training =6))
+pred
+```
+
+
